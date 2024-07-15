@@ -11,6 +11,11 @@ using namespace std;
 
 ACO::ACO(int dimension_, float * edge_weights_src, float a_, float b_, float p_, float Q_)
 {
+    a = a_;
+    b = b_;
+    p = p_;
+    Q = Q_;
+
     dimension = dimension_;
 
     edge_weights = (float*)malloc(sizeof(float) * dimension * dimension);
@@ -30,11 +35,6 @@ ACO::ACO(int dimension_, float * edge_weights_src, float a_, float b_, float p_,
 
     tour = (int*)malloc(sizeof(int) * dimension);
 
-    a = a_;
-    b = b_;
-    p = p_;
-    Q = Q_;
-
     srand(time(0));
 }
 
@@ -46,14 +46,18 @@ float ACO::desire_of_moving_from_city_i_to_j(int i, int j)
     return pow( pheromone_i_to_j, a ) * pow( 1.0/edge_weight_i_to_j, b );
 }
 
-float ACO::probability_ant_moves_from_city_i_to_j(int i, int j)
+float ACO::calculate_total_desire_from_i(int i)
 {
-    float total_desire = 0;
+    total_desire = 0;
     for(int k=0; k<number_of_remaining_cities; k++)
     {
         total_desire += desire_of_moving_from_city_i_to_j(i,remaining_cities[k]);
     }
+    return total_desire;
+}
 
+float ACO::probability_ant_moves_from_city_i_to_j(int i, int j)
+{
     return desire_of_moving_from_city_i_to_j(i,j)/total_desire;
 }
 
@@ -66,12 +70,13 @@ float ACO::get_length_of_tour()
         int j = tour[(k+1)%dimension];
         length += edge_weights[i + j*dimension];
     }
+    tour_length = length;
     return length;
 }
 
 void ACO::update_pheromones()
 {
-    float length = get_length_of_tour();
+    float length = tour_length;
     float delta_pheromone = Q/length;
     for(int k=0; k<dimension; k++)
     {
@@ -117,6 +122,7 @@ void ACO::run_one_ant()
 
     while(number_of_remaining_cities > 0)
     {
+        calculate_total_desire_from_i(current_city);
         float random_number = (float)rand() / numeric_limits<int>::max();
         float probability_sum = 0;
         int i = 0;
@@ -168,5 +174,6 @@ void ACO::run_one_ant()
     //    cout << tour[i] << ((i==dimension-1)? "}\n" : ", ");
     //}
     //cout << "Length of tour = " << get_length_of_tour() << "\n";
+    get_length_of_tour();
     update_pheromones();
 }

@@ -260,6 +260,7 @@ void draw_pheromones(sf::RenderWindow& window, TSPLIB_INSTANCE tsp_instance, flo
 			pair<float, float> node_i_view = convert_tsplib_point_to_view(window, node_i, view_edges);
 			pair<int,int> node_j = tsp_instance.node_coords[j];
 			pair<float, float> node_j_view = convert_tsplib_point_to_view(window, node_j, view_edges);
+			if(distance/highest_value*size < 0.1) continue;
 			drawThickLine(window, sf::Vector2f(node_i_view.first, node_i_view.second), sf::Vector2f(node_j_view.first, node_j_view.second), distance/highest_value*size, color);
 		}
 	}
@@ -314,7 +315,8 @@ int main(int argc, char ** argv)
 
 	}
 
-	ACO test_aco(test_tsp.dimension, tsp_edge_weights, 1, 5, 0.5, 1);
+	int number_of_ants = 1000;
+	ACO test_aco(test_tsp.dimension, tsp_edge_weights, 1, 5, 0.5, 1000.0/number_of_ants);
 
 	float best_tour_length = numeric_limits<float>::max();
 	int * best_tour = (int*)malloc(sizeof(int)*test_tsp.dimension);
@@ -348,13 +350,13 @@ int main(int argc, char ** argv)
 		//test_tsp.draw(window, 7*window_area_scale_factor, sf::Color::Blue);
 		//draw_edges_distances(window, test_tsp, 2, sf::Color::Red);
 
-		for(int i=0;i<100;i++){
+		for(int i=0;i<number_of_ants;i++){
 			test_aco.run_one_ant();
 			//cout << "Iteration " << i << "\n";
 			//cout << "Tour Length = " << test_aco.get_length_of_tour() << ", ";
-			if(test_aco.get_length_of_tour() < best_tour_length)
+			if(test_aco.tour_length < best_tour_length)
 			{ 
-				best_tour_length = test_aco.get_length_of_tour();
+				best_tour_length = test_aco.tour_length;
 				memcpy(best_tour, test_aco.tour, sizeof(int)*test_tsp.dimension);
 				cout << "New best tour: " << best_tour_length << "\n";
 				for(int j=0;j<test_tsp.dimension;j++)
@@ -366,7 +368,7 @@ int main(int argc, char ** argv)
 		}
 		test_aco.end_epoch();
 
-		draw_pheromones(window, test_tsp, test_aco.pheromones, 5, sf::Color::Red);
+		draw_pheromones(window, test_tsp, test_aco.pheromones, 10, sf::Color::Red);
 		draw_tour(window, test_tsp, best_tour, 10, sf::Color::Black);
 		draw_tsplib_instance(window, test_tsp, 7*window_area_scale_factor, sf::Color::Blue);
 		window.display();
