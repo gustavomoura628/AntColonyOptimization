@@ -7,13 +7,74 @@
 
 using namespace std;
 
+GUI::GUI(sf::RenderWindow& window)
+: window(window)
+{
+	camera_view = window.getView(); // default view
+}
+
+// Set the edges of the viewport
+void GUI::set_camera_view_edges(float left, float right, float top, float bottom)
+{
+    sf::FloatRect visibleArea(left, top, right-left, bottom-top);
+    camera_view = sf::View(visibleArea);
+}
+
+
+// Sets viewport based on extreme points
+void GUI::set_camera_view_edges_given_points(int dimension, vector<pair<float,float>> points)
+{
+	// Get borders of graph
+	float smallest_node_x = numeric_limits<float>::max(), greatest_node_x = numeric_limits<float>::min();
+	float smallest_node_y = numeric_limits<float>::max(), greatest_node_y = numeric_limits<float>::min();
+
+	for(pair<float,float> node : points)
+	{
+		if( node.first > greatest_node_x) greatest_node_x = node.first;
+		if( node.first < smallest_node_x) smallest_node_x = node.first;
+		if( node.second > greatest_node_y) greatest_node_y = node.second;
+		if( node.second < smallest_node_y) smallest_node_y = node.second;
+	}
+
+	float padding_percent = 0.1f;
+	float view_left   = smallest_node_x - (greatest_node_x - smallest_node_x) * padding_percent/2;
+	float view_right  = greatest_node_x + (greatest_node_x - smallest_node_x) * padding_percent/2;
+	float view_top    = smallest_node_y - (greatest_node_y - smallest_node_y) * padding_percent/2;
+	float view_bottom = greatest_node_y + (greatest_node_y - smallest_node_y) * padding_percent/2;
+
+    set_camera_view_edges(view_left, view_right, view_bottom, view_top); // top/bottom flipped, flips y axis of view
+}
+
+sf::Vector2f GUI::convert_float_pair_to_sf_vector(pair<float,float> point)
+{
+	return sf::Vector2f(point.first, point.second);
+}
+
+sf::Vector2f GUI::convert_point_to_another_view(sf::View dest, sf::View src, sf::Vector2f& point)
+{
+	sf::Vector2f transformed_point;
+	transformed_point.x = (point.x - src.getCenter().x)*(dest.getSize().x/src.getSize().x) + dest.getCenter().x;
+	transformed_point.y = (point.y - src.getCenter().y)*(dest.getSize().y/src.getSize().y) + dest.getCenter().y;
+
+	return transformed_point;
+}
+
+float GUI::get_window_size_scaling_factor()
+{
+	return min(window.getSize().x, window.getSize().y)*0.0005;
+}
+
 // Function to calculate the unit vector perpendicular to the line direction
-sf::Vector2f perpendicular(const sf::Vector2f& vector) {
+sf::Vector2f GUI::perpendicular(const sf::Vector2f& vector) {
 	return sf::Vector2f(-vector.y, vector.x);
 }
 
 // Function to draw a thick line
-void draw_thick_line(sf::RenderWindow& window, sf::Vector2f start, sf::Vector2f end, float thickness, sf::Color color) {
+void GUI::draw_thick_line(sf::Vector2f start, sf::Vector2f end, float thickness, sf::Color color) {
+	thickness*=get_window_size_scaling_factor();
+	start = convert_point_to_another_view(window.getView(), camera_view, start);
+	end = convert_point_to_another_view(window.getView(), camera_view, end);
+
 	sf::Vector2f direction = end - start;
 	float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
 	direction /= length; // Normalize direction vector
@@ -34,51 +95,23 @@ void draw_thick_line(sf::RenderWindow& window, sf::Vector2f start, sf::Vector2f 
 }
 
 
-void draw_points(sf::RenderWindow& window, vector<pair<float,float>> points, float size, sf::Color color) {
+void GUI::draw_points(vector<pair<float,float>> points, float size, sf::Color color) {
+	size*=get_window_size_scaling_factor();
 	sf::CircleShape circle_shape(size);
 
 	circle_shape.setOrigin(circle_shape.getRadius(), circle_shape.getRadius());
 	circle_shape.setFillColor(color);
 	for(pair<float,float> point : points) {
-		float x = point.first;
-		float y = point.second;
-		circle_shape.setPosition(x,y);
+		sf::Vector2f point_sf = convert_float_pair_to_sf_vector(point);
+		sf::Vector2f point_transformed = convert_point_to_another_view(window.getView(), camera_view, point_sf);
+
+		circle_shape.setPosition(point_transformed);
+
 		window.draw(circle_shape);
 	}
 }
 
-// Set the edges of the viewport
-void set_view_edges(sf::RenderWindow& window, float left, float right, float top, float bottom)
-{
-    sf::FloatRect visibleArea(left, top, right-left, bottom-top);
-    window.setView(sf::View(visibleArea));
-}
-
-// Sets viewport based on extreme points
-void set_view_edges_given_points(sf::RenderWindow& window, int dimension, vector<pair<float,float>> points)
-{
-	// Get borders of graph
-	float smallest_node_x = numeric_limits<float>::max(), greatest_node_x = numeric_limits<float>::min();
-	float smallest_node_y = numeric_limits<float>::max(), greatest_node_y = numeric_limits<float>::min();
-
-	for(pair<float,float> node : points)
-	{
-		if( node.first > greatest_node_x) greatest_node_x = node.first;
-		if( node.first < smallest_node_x) smallest_node_x = node.first;
-		if( node.second > greatest_node_y) greatest_node_y = node.second;
-		if( node.second < smallest_node_y) smallest_node_y = node.second;
-	}
-
-	float padding_percent = 0.1f;
-	float view_left   = smallest_node_x - (greatest_node_x - smallest_node_x) * padding_percent/2;
-	float view_right  = greatest_node_x + (greatest_node_x - smallest_node_x) * padding_percent/2;
-	float view_top    = smallest_node_y - (greatest_node_y - smallest_node_y) * padding_percent/2;
-	float view_bottom = greatest_node_y + (greatest_node_y - smallest_node_y) * padding_percent/2;
-
-    set_view_edges(window, view_left, view_right, view_bottom, view_top); // top/bottom flipped, flips y axis of view
-}
-
-void draw_pheromones(sf::RenderWindow& window, int dimension, vector<pair<float,float>> node_coords, float * pheromones, float size, sf::Color color)
+void GUI::draw_pheromones(int dimension, vector<pair<float,float>> node_coords, float * pheromones, float size, sf::Color color)
 {
 	float distance;
 	float highest_value = *max_element(pheromones, pheromones + dimension*dimension);
@@ -95,13 +128,12 @@ void draw_pheromones(sf::RenderWindow& window, int dimension, vector<pair<float,
             sf::Vector2f node_i(node_coords[i].first, node_coords[i].second);
             sf::Vector2f node_j(node_coords[j].first, node_coords[j].second);
 
-			draw_thick_line(window, node_i, node_j, line_width, color);
+			draw_thick_line(node_i, node_j, line_width, color);
 		}
 	}
 }
 
-
-void draw_tour(sf::RenderWindow& window, int dimension, vector<pair<float,float>> node_coords, int * tour, float size, sf::Color color)
+void GUI::draw_tour(int dimension, vector<pair<float,float>> node_coords, int * tour, float size, sf::Color color)
 {
 	for(int k=0; k<dimension; k++)
 	{
@@ -110,6 +142,6 @@ void draw_tour(sf::RenderWindow& window, int dimension, vector<pair<float,float>
 
 		sf::Vector2f node_i(node_coords[i].first, node_coords[i].second);
 		sf::Vector2f node_j(node_coords[j].first, node_coords[j].second);
-		draw_thick_line(window, node_i, node_j, size, color);
+		draw_thick_line(node_i, node_j, size, color);
 	}
 }

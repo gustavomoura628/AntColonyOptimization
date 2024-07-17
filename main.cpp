@@ -30,8 +30,10 @@ int main(int argc, char ** argv)
 
 	TSPLIB_INSTANCE test_tsp(tsp_filename);
 
+	GUI gui(window);
+
 	//set_view_edges_with_tsplib_instance(window, test_tsp);
-	set_view_edges_given_points(window, test_tsp.dimension, test_tsp.node_coords);
+	gui.set_camera_view_edges_given_points(test_tsp.dimension, test_tsp.node_coords);
 
 
 	float * tsp_edge_weights = (float*)malloc(sizeof(float)*test_tsp.dimension * test_tsp.dimension);
@@ -65,13 +67,13 @@ int main(int argc, char ** argv)
 			sf::Event::Closed)
 				window.close();
 
-			//// catch the resize events
-			//if (event.type == sf::Event::Resized)
-			//{
-			//	// update the view to the new size of the window
-			//	sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
-			//	window.setView(sf::View(visibleArea));
-			//}
+			// catch the resize events
+			if (event.type == sf::Event::Resized)
+			{
+				// update the view to the new size of the window
+				sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
+				window.setView(sf::View(visibleArea));
+			}
 		}
 
 		window.clear(sf::Color::White);
@@ -104,9 +106,9 @@ int main(int argc, char ** argv)
 		test_aco.end_epoch();
 		current_iteration++;
 
-		draw_pheromones(window, test_tsp.dimension, test_tsp.node_coords, test_aco.pheromones, 20, sf::Color::Red);
-		draw_tour(window, test_tsp.dimension, test_tsp.node_coords, best_tour, 20, sf::Color::Black);
-		draw_points(window, test_tsp.node_coords, 15, sf::Color::Blue);
+		gui.draw_pheromones(test_tsp.dimension, test_tsp.node_coords, test_aco.pheromones, 20, sf::Color::Red);
+		gui.draw_tour(test_tsp.dimension, test_tsp.node_coords, best_tour, 20, sf::Color::Black);
+		gui.draw_points(test_tsp.node_coords, 15, sf::Color::Blue);
 		window.display();
 	}
 	return 0;
