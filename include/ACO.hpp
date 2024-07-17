@@ -1,11 +1,6 @@
 #ifndef ACO_HPP
 #define ACO_HPP
 
-#include <iostream>
-#include <cmath>
-#include <cstring>
-#include <cstdlib>
-
 class ACO{
     public:
         int dimension;

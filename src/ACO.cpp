@@ -1,5 +1,4 @@
 #include "../include/ACO.hpp"
-#include <iostream>
 
 #include <iostream>
 #include <cmath>
