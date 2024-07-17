@@ -47,7 +47,7 @@ int main(int argc, char ** argv)
 	}
 
 	int number_of_ants = 1000;
-	ACO test_aco(test_tsp.dimension, tsp_edge_weights, 1, 5, 0.5, 1000.0/number_of_ants);
+	ACO test_aco(test_tsp.dimension, tsp_edge_weights, 1, 5, 0.5, 1);
 
 	float best_tour_length = numeric_limits<float>::max();
 	int * best_tour = (int*)malloc(sizeof(int)*test_tsp.dimension);
@@ -82,6 +82,11 @@ int main(int argc, char ** argv)
 		float window_area_scale_factor = min(window.getSize().x, window.getSize().y) / 1000.0;
 		//test_tsp.draw(window, 7*window_area_scale_factor, sf::Color::Blue);
 
+		gui.draw_pheromones(test_tsp.dimension, test_tsp.node_coords, test_aco.pheromones, 20, sf::Color::Red);
+		gui.draw_tour(test_tsp.dimension, test_tsp.node_coords, best_tour, 20, sf::Color::Black);
+		gui.draw_points(test_tsp.node_coords, 15, sf::Color::Blue);
+		window.display();
+
 		for(int i=0;i<number_of_ants;i++){
 			test_aco.run_one_ant();
 			//cout << "Iteration " << i << "\n";
@@ -106,10 +111,6 @@ int main(int argc, char ** argv)
 		test_aco.end_epoch();
 		current_iteration++;
 
-		gui.draw_pheromones(test_tsp.dimension, test_tsp.node_coords, test_aco.pheromones, 20, sf::Color::Red);
-		gui.draw_tour(test_tsp.dimension, test_tsp.node_coords, best_tour, 20, sf::Color::Black);
-		gui.draw_points(test_tsp.node_coords, 15, sf::Color::Blue);
-		window.display();
 	}
 	return 0;
 }

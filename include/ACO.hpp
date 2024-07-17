@@ -5,7 +5,7 @@ class ACO{
     public:
         int dimension;
         float * pheromones;
-        float * pheromones_aux;
+        float * pheromones_delta;
         float * edge_weights;
         float a; // Pheromone Coefficient
         float b; // Edge Weight Coefficient
