@@ -291,6 +291,9 @@ int main(int argc, char ** argv)
 		exit(1);
 	}
 
+	struct timespec timer_init;
+	timespec_get(&timer_init, TIME_UTC);
+
 	string tsp_filename(argv[1]);
 
 
@@ -325,6 +328,8 @@ int main(int argc, char ** argv)
 		best_tour[i]=i;
 	}
 
+	int current_iteration = 0;
+	
 	while (window.isOpen()) 
 	{
 		sf::Event event;
@@ -358,15 +363,21 @@ int main(int argc, char ** argv)
 			{ 
 				best_tour_length = test_aco.tour_length;
 				memcpy(best_tour, test_aco.tour, sizeof(int)*test_tsp.dimension);
-				cout << "New best tour: " << best_tour_length << "\n";
-				for(int j=0;j<test_tsp.dimension;j++)
-				{
-					cout << best_tour[j] << ((j==test_tsp.dimension-1)? "\n" : ", ");
-				}
+				cout << "New best tour: " << best_tour_length << ", iteration = " << current_iteration << "\n";
+				struct timespec current_time;
+				timespec_get(&current_time, TIME_UTC);
+				double timer_init_float = timer_init.tv_sec * 1000 + (double)timer_init.tv_nsec / 1000000;
+				double current_time_float = current_time.tv_sec * 1000 + (double)current_time.tv_nsec / 1000000;
+				cout << "Time: " << (int)((current_time_float - timer_init_float)/1000) << " seconds " << ((int)(current_time_float - timer_init_float)%1000 )<< " miliseconds\n";
+				//for(int j=0;j<test_tsp.dimension;j++)
+				//{
+				//	cout << best_tour[j] << ((j==test_tsp.dimension-1)? "\n" : ", ");
+				//}
 			}
 			//cout << "Best Tour Length = " << best_tour_length << "\n";
 		}
 		test_aco.end_epoch();
+		current_iteration++;
 
 		draw_pheromones(window, test_tsp, test_aco.pheromones, 10, sf::Color::Red);
 		draw_tour(window, test_tsp, best_tour, 10, sf::Color::Black);
