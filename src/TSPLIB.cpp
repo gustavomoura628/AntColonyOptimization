@@ -44,7 +44,7 @@ TSPLIB_INSTANCE::TSPLIB_INSTANCE(string filename)
         else
         {
             if(line == "EOF") break;
-            int index, x, y;
+            float index, x, y;
             iss >> index >> x >> y;
             node_coords.push_back(make_pair(x,y));
         }

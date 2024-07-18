@@ -1,11 +1,59 @@
 #include <SFML/Graphics.hpp>
 #include <cmath>
 #include <bits/stdc++.h>
+#include <iostream>
+#include <stdio.h>
 #include "./include/ACO.hpp"
 #include "./include/GUI.hpp"
 #include "./include/TSPLIB.hpp"
 
 using namespace std;
+
+__global__ void test_kernel(int N, int * counter)
+{
+	int idx = threadIdx.x + blockIdx.x*blockDim.x;
+	int stride = blockDim.x * gridDim.x;
+	
+	for(int i = idx; i < N; i+=stride)
+	{
+		printf("Kernel number %d, adding to counter (currently %d)\n", i, *counter);
+		atomicAdd(counter, 1);
+	}
+}
+
+
+// TODO: Precalc desire (currently takes two pow() calls and a multiplication
+__global__ void run_one_ant(int NUMBER_OF_ANTS, float time, int dimension, float * pheromones, float * pheromones_delta, float * edge_weights, float a, float b, float p, float Q)
+{
+	int idx = threadIdx.x + blockIdx.x*blockDim.x;
+	int stride = blockDim.x * gridDim.x;
+
+	
+	for(int i = idx; i < NUMBER_OF_ANTS; i+=stride)
+	{
+
+		int number_of_remaining_nodes = dimension;
+		int * remaining_nodes = (int*)malloc(sizeof(int)*dimension);
+		for(int j=0;j<dimension;j++)
+		{
+			remaining_nodes[j]=j;
+		}
+
+		printf("Edge i to n-i = %.2f\n",edge_weights[i+(dimension-i-1)*dimension]);
+
+		
+		printf("Hello ant %d\n", i);
+	}
+}
+
+
+float get_time()
+{
+	struct timespec time;
+	timespec_get(&time, TIME_UTC);
+	return time.tv_sec + time.tv_nsec/1000000000;
+}
+
 
 int main(int argc, char ** argv)
 {
@@ -14,11 +62,9 @@ int main(int argc, char ** argv)
 		exit(1);
 	}
 
-	struct timespec timer_init;
-	timespec_get(&timer_init, TIME_UTC);
+	float initial_time = get_time();
 
 	string tsp_filename(argv[1]);
-
 
 	sf::RenderWindow window( sf::VideoMode(1980,1080), "TSPLIB Display");
 
@@ -57,6 +103,26 @@ int main(int argc, char ** argv)
 	}
 
 	int current_iteration = 0;
+
+	int * cuda_counter;
+	cudaMallocManaged(&cuda_counter, sizeof(int));
+
+	float * pheromones;
+	float * pheromones_delta;
+	float * edge_weights;
+	cudaMallocManaged(&pheromones, sizeof(float)*test_tsp.dimension*test_tsp.dimension);
+	cudaMallocManaged(&pheromones_delta, sizeof(float)*test_tsp.dimension*test_tsp.dimension);
+	cudaMallocManaged(&edge_weights, sizeof(float)*test_tsp.dimension*test_tsp.dimension);
+	cudaMemcpy(pheromones, test_aco.pheromones,sizeof(float)*test_tsp.dimension*test_tsp.dimension,::cudaMemcpyHostToDevice);
+	cudaMemcpy(pheromones_delta, test_aco.pheromones_delta,sizeof(float)*test_tsp.dimension*test_tsp.dimension,::cudaMemcpyHostToDevice);
+	cudaMemcpy(edge_weights, tsp_edge_weights,sizeof(float)*test_tsp.dimension*test_tsp.dimension,::cudaMemcpyHostToDevice);
+	*cuda_counter = 0;
+	//test_kernel<<<10,10>>>(100,cuda_counter);
+	cout << "Cuda counter = " << *cuda_counter << "\n";
+	run_one_ant<<<10,10>>>(100, test_tsp.dimension, pheromones, pheromones_delta, edge_weights, test_aco.a, test_aco.b, test_aco.p, test_aco.Q);
+	cudaDeviceSynchronize();
+	exit(1);
+
 	
 	while (window.isOpen()) 
 	{
@@ -96,11 +162,8 @@ int main(int argc, char ** argv)
 				best_tour_length = test_aco.tour_length;
 				memcpy(best_tour, test_aco.tour, sizeof(int)*test_tsp.dimension);
 				cout << "New best tour: " << best_tour_length << ", iteration = " << current_iteration << "\n";
-				struct timespec current_time;
-				timespec_get(&current_time, TIME_UTC);
-				double timer_init_float = timer_init.tv_sec * 1000 + (double)timer_init.tv_nsec / 1000000;
-				double current_time_float = current_time.tv_sec * 1000 + (double)current_time.tv_nsec / 1000000;
-				cout << "Time: " << (int)((current_time_float - timer_init_float)/1000) << " seconds " << ((int)(current_time_float - timer_init_float)%1000 )<< " miliseconds\n";
+				float current_time = get_time();
+				cout << "Time: " << (int)(initial_time - current_time) << " seconds " << (((int)(initial_time - current_time)*1000)%1000 )<< " miliseconds\n";
 				//for(int j=0;j<test_tsp.dimension;j++)
 				//{
 				//	cout << best_tour[j] << ((j==test_tsp.dimension-1)? "\n" : ", ");
