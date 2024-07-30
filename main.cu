@@ -141,8 +141,8 @@ double get_time()
 
 int main(int argc, char ** argv)
 {
-	if(argc < 3) {
-		cout << "Usage: ./main <tsplib file> <sequential or parallel>\n";
+	if(argc < 4) {
+		cout << "Usage: ./main <tsplib file> <sequential or parallel> <display or headless>\n";
 		exit(1);
 	}
 
@@ -159,6 +159,22 @@ int main(int argc, char ** argv)
 	else
 	{
 		cerr << "INVALID ARGUMENT " << argv[2] << "\n";
+		exit(1);
+	}
+
+	string headless_argument(argv[3]);
+	bool headless = false;
+	if( headless_argument == "headless")
+	{
+		headless = true;
+	}
+	else if( headless_argument == "display" )
+	{
+		headless = false;
+	}
+	else
+	{
+		cerr << "INVALID ARGUMENT " << argv[3] << "\n";
 		exit(1);
 	}
 
@@ -264,10 +280,13 @@ int main(int argc, char ** argv)
 		// PARALLEL
 		if(!useSequentialCode)
 		{
-			gui.draw_pheromones(test_tsp.dimension, test_tsp.node_coords, pheromones, 20, sf::Color::Red);
-			gui.draw_tour(test_tsp.dimension, test_tsp.node_coords, best_tour, 20, sf::Color::Black);
-			gui.draw_points(test_tsp.node_coords, 15, sf::Color::Blue);
-			window.display();
+			if(!headless)
+			{
+				gui.draw_pheromones(test_tsp.dimension, test_tsp.node_coords, pheromones, 20, sf::Color::Red);
+				gui.draw_tour(test_tsp.dimension, test_tsp.node_coords, best_tour, 20, sf::Color::Black);
+				gui.draw_points(test_tsp.node_coords, 15, sf::Color::Blue);
+				window.display();
+			}
 
 			cudaMemPrefetchAsync(pheromones, sizeof(float)*test_tsp.dimension*test_tsp.dimension, deviceId);
 			run_one_ant<<<number_of_blocks,threads_per_block>>>(number_of_ants, get_time(), test_tsp.dimension, pheromones, pheromones_delta, edge_weights, test_aco.a, test_aco.b, test_aco.p, test_aco.Q, tour_preallocated_memory, tour_length);
@@ -292,10 +311,13 @@ int main(int argc, char ** argv)
 		{
 			// SEQUENTIAL
 
-			gui.draw_pheromones(test_tsp.dimension, test_tsp.node_coords, test_aco.pheromones, 20, sf::Color::Red);
-			gui.draw_tour(test_tsp.dimension, test_tsp.node_coords, best_tour, 20, sf::Color::Black);
-			gui.draw_points(test_tsp.node_coords, 15, sf::Color::Blue);
-			window.display();
+			if(!headless)
+			{
+				gui.draw_pheromones(test_tsp.dimension, test_tsp.node_coords, test_aco.pheromones, 20, sf::Color::Red);
+				gui.draw_tour(test_tsp.dimension, test_tsp.node_coords, best_tour, 20, sf::Color::Black);
+				gui.draw_points(test_tsp.node_coords, 15, sf::Color::Blue);
+				window.display();
+			}
 
 			for(int i=0;i<number_of_ants;i++){
 				test_aco.run_one_ant();
