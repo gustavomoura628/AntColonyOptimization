@@ -32,7 +32,12 @@ class GUI{
         // Function to draw a thick line
         void draw_thick_line(sf::Vector2f start, sf::Vector2f end, float thickness, sf::Color color);
 
+        // Function to draw the edge between points
+        void draw_edge(sf::Vector2f start, sf::Vector2f end, float thickness, sf::Color color);
+
         void draw_points(vector<pair<float,float>> points, float size, sf::Color color);
+
+        void draw_point(sf::Vector2f, float size, sf::Color color);
 
         void draw_pheromones(int dimension, vector<pair<float,float>> node_coords, float * pheromones, float size, sf::Color color);
 

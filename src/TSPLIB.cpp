@@ -83,3 +83,24 @@ int TSPLIB_INSTANCE::euclidean_distance(int node_i_index, int node_j_index)
 
     return dij;
 }
+
+int TSPLIB_INSTANCE::manhattan_distance(int node_i_index, int node_j_index)
+{
+    pair<float,float> node_i = node_coords[node_i_index];
+    pair<float,float> node_j = node_coords[node_j_index];
+
+    // Euclidean distance function defined in the TSPLIB Paper
+    int xd = node_i.first - node_j.first;
+    int yd = node_i.second - node_j.second;
+    int dij = abs(xd) + abs(yd);
+
+    ////cout << "Distance from city[" << node_i_index << "] (" << node_i.first << ", " << node_i.second << ") to city[" << node_j_index << "] (" << node_j.first << ", " << node_j.second << ") is equal to " << dij << endl;
+
+    return dij;
+}
+
+int TSPLIB_INSTANCE::distance_metric(int node_i_index, int node_j_index)
+{
+    return euclidean_distance(node_i_index, node_j_index);
+    //return manhattan_distance(node_i_index, node_j_index);
+}

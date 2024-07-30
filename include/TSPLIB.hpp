@@ -15,6 +15,8 @@ class TSPLIB_INSTANCE{
 		vector<pair<float,float>> node_coords;
 		TSPLIB_INSTANCE(string filename);
 		int euclidean_distance(int node_i_index, int node_j_index);
+		int manhattan_distance(int node_i_index, int node_j_index);
+		int distance_metric(int node_i_index, int node_j_index);
 };
 
 #endif

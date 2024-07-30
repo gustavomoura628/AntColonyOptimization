@@ -141,10 +141,27 @@ double get_time()
 
 int main(int argc, char ** argv)
 {
-	if(argc < 2) {
-		cout << "Please provide the filename of the .tsp file as an argument\n";
+	if(argc < 3) {
+		cout << "Usage: ./main <tsplib file> <sequential or parallel>\n";
 		exit(1);
 	}
+
+	string execution_mode(argv[2]);
+	bool useSequentialCode = false;
+	if( execution_mode == "sequential")
+	{
+		useSequentialCode = true;
+	}
+	else if( execution_mode== "parallel" )
+	{
+		useSequentialCode = false;
+	}
+	else
+	{
+		cerr << "INVALID ARGUMENT " << argv[2] << "\n";
+		exit(1);
+	}
+
 
 	double initial_time = get_time();
 
@@ -171,7 +188,7 @@ int main(int argc, char ** argv)
 	{
 		for(int j=0;j<test_tsp.dimension; j++)
 		{
-			tsp_edge_weights[i+j*test_tsp.dimension] = test_tsp.euclidean_distance(i,j);
+			tsp_edge_weights[i+j*test_tsp.dimension] = test_tsp.distance_metric(i,j);
 		}
 
 	}
@@ -218,6 +235,7 @@ int main(int argc, char ** argv)
 
 	cudaDeviceSynchronize();
 
+
 	while (window.isOpen()) 
 	{
 		sf::Event event;
@@ -244,58 +262,58 @@ int main(int argc, char ** argv)
 
 
 		// PARALLEL
+		if(!useSequentialCode)
+		{
+			gui.draw_pheromones(test_tsp.dimension, test_tsp.node_coords, pheromones, 20, sf::Color::Red);
+			gui.draw_tour(test_tsp.dimension, test_tsp.node_coords, best_tour, 20, sf::Color::Black);
+			gui.draw_points(test_tsp.node_coords, 15, sf::Color::Blue);
+			window.display();
 
-		gui.draw_pheromones(test_tsp.dimension, test_tsp.node_coords, pheromones, 20, sf::Color::Red);
-		gui.draw_tour(test_tsp.dimension, test_tsp.node_coords, best_tour, 20, sf::Color::Black);
-		gui.draw_points(test_tsp.node_coords, 15, sf::Color::Blue);
-		window.display();
+			cudaMemPrefetchAsync(pheromones, sizeof(float)*test_tsp.dimension*test_tsp.dimension, deviceId);
+			run_one_ant<<<number_of_blocks,threads_per_block>>>(number_of_ants, get_time(), test_tsp.dimension, pheromones, pheromones_delta, edge_weights, test_aco.a, test_aco.b, test_aco.p, test_aco.Q, tour_preallocated_memory, tour_length);
+			cudaDeviceSynchronize();
+			finish_epoch<<<number_of_blocks,threads_per_block>>>(number_of_ants, test_tsp.dimension, pheromones, pheromones_delta, edge_weights, tour_preallocated_memory, test_aco.p);
+			cudaDeviceSynchronize();
+			cudaMemPrefetchAsync(pheromones, sizeof(float)*test_tsp.dimension*test_tsp.dimension, cudaCpuDeviceId);
 
-		cudaMemPrefetchAsync(pheromones, sizeof(float)*test_tsp.dimension*test_tsp.dimension, deviceId);
-		run_one_ant<<<number_of_blocks,threads_per_block>>>(number_of_ants, get_time(), test_tsp.dimension, pheromones, pheromones_delta, edge_weights, test_aco.a, test_aco.b, test_aco.p, test_aco.Q, tour_preallocated_memory, tour_length);
-		cudaDeviceSynchronize();
-		finish_epoch<<<number_of_blocks,threads_per_block>>>(number_of_ants, test_tsp.dimension, pheromones, pheromones_delta, edge_weights, tour_preallocated_memory, test_aco.p);
-		cudaDeviceSynchronize();
-		cudaMemPrefetchAsync(pheromones, sizeof(float)*test_tsp.dimension*test_tsp.dimension, cudaCpuDeviceId);
-
-		for(int i=0;i<number_of_ants;i++){
-			if(tour_length[i] < best_tour_length)
-			{ 
-				best_tour_length = tour_length[i];
-				cudaMemcpy(best_tour, &tour_preallocated_memory[i*test_tsp.dimension], sizeof(int)*test_tsp.dimension, ::cudaMemcpyDeviceToHost);
-				cout << "New best tour: " << best_tour_length << ", iteration = " << current_iteration << "\n";
-				double current_time = get_time();
-				cout << "Time: " << (int)(current_time - initial_time) << " seconds " << (((int)((current_time - initial_time)*1000))%1000 )<< " miliseconds\n";
+			for(int i=0;i<number_of_ants;i++){
+				if(tour_length[i] < best_tour_length)
+				{ 
+					best_tour_length = tour_length[i];
+					cudaMemcpy(best_tour, &tour_preallocated_memory[i*test_tsp.dimension], sizeof(int)*test_tsp.dimension, ::cudaMemcpyDeviceToHost);
+					cout << "New best tour: " << best_tour_length << ", iteration = " << current_iteration << "\n";
+					double current_time = get_time();
+					cout << "Time: " << (int)(current_time - initial_time) << " seconds " << (((int)((current_time - initial_time)*1000))%1000 )<< " miliseconds\n";
+				}
 			}
+			current_iteration++;
 		}
-		current_iteration++;
+		else
+		{
+			// SEQUENTIAL
 
+			gui.draw_pheromones(test_tsp.dimension, test_tsp.node_coords, test_aco.pheromones, 20, sf::Color::Red);
+			gui.draw_tour(test_tsp.dimension, test_tsp.node_coords, best_tour, 20, sf::Color::Black);
+			gui.draw_points(test_tsp.node_coords, 15, sf::Color::Blue);
+			window.display();
 
-
-
-
-		// SEQUENTIAL
-
-		//gui.draw_pheromones(test_tsp.dimension, test_tsp.node_coords, test_aco.pheromones, 20, sf::Color::Red);
-		//gui.draw_tour(test_tsp.dimension, test_tsp.node_coords, best_tour, 20, sf::Color::Black);
-		//gui.draw_points(test_tsp.node_coords, 15, sf::Color::Blue);
-		//window.display();
-
-		//for(int i=0;i<number_of_ants;i++){
-		//	test_aco.run_one_ant();
-		//	//cout << "Iteration " << i << "\n";
-		//	//cout << "Tour Length = " << test_aco.get_length_of_tour() << ", ";
-		//	if(test_aco.tour_length < best_tour_length)
-		//	{ 
-		//		best_tour_length = test_aco.tour_length;
-		//		memcpy(best_tour, test_aco.tour, sizeof(int)*test_tsp.dimension);
-		//		cout << "New best tour: " << best_tour_length << ", iteration = " << current_iteration << "\n";
-		//		double current_time = get_time();
-		//		cout << "Time: " << (int)(initial_time - current_time) << " seconds " << (((int)(initial_time - current_time)*1000)%1000 )<< " miliseconds\n";
-		//	}
-		//	//cout << "Best Tour Length = " << best_tour_length << "\n";
-		//}
-		//test_aco.end_epoch();
-		//current_iteration++;
+			for(int i=0;i<number_of_ants;i++){
+				test_aco.run_one_ant();
+				//cout << "Iteration " << i << "\n";
+				//cout << "Tour Length = " << test_aco.get_length_of_tour() << ", ";
+				if(test_aco.tour_length < best_tour_length)
+				{ 
+					best_tour_length = test_aco.tour_length;
+					memcpy(best_tour, test_aco.tour, sizeof(int)*test_tsp.dimension);
+					cout << "New best tour: " << best_tour_length << ", iteration = " << current_iteration << "\n";
+					double current_time = get_time();
+					cout << "Time: " << (int)(current_time - initial_time) << " seconds " << (((int)((current_time - initial_time)*1000))%1000 )<< " miliseconds\n";
+				}
+				//cout << "Best Tour Length = " << best_tour_length << "\n";
+			}
+			test_aco.end_epoch();
+			current_iteration++;
+		}
 
 	}
 	return 0;
